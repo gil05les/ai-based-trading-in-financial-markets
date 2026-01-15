@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: trading_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: trading_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: trading_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend:delegated
+      - ./tests:/app/tests:delegated
+      - ./logs:/app/logs
+    command: python -m backend.main
+    restart: unless-stopped
+
+  news-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.scraper
+    container_name: trading_scraper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    volumes:
+      - ./news_scraper:/app/news_scraper:delegated
+      - ./backend:/app/backend:delegated
+      - ./logs:/app/logs:delegated
+    command: python -m news_scraper.main
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: trading_frontend
+    depends_on:
+      - postgres
+      - backend
+    env_file:
+      - .env
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8081:8000"
+    volumes:
+      - ./frontend:/app/frontend:delegated
+      - ./backend:/app/backend:delegated
+    command: python -m frontend.main
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:8.12
+    container_name: trading_pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@localhost.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-changeme}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
