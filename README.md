@@ -1,6 +1,7 @@
-# AI Agent Trading System
+# AI-Based Trading in Financial Markets
+Multi-Agent Autonomous Trading via LLM Reasoning & Debate
 
-A multi-agent autonomous trading system built with LangGraph, OpenAI, and Alpaca. The system scrapes news, conducts debates between bull and bear analysts, and executes trades based on consensus and risk management.
+This repository contains the implementation of a multi-agent autonomous trading system developed for our Bachelor Project at the University of St. Gallen (HSG). The system leverages Large Language Models (LLMs) to transform unstructured financial news into executable trading strategies through a structured, adversarial reasoning process.
 
 ## Getting Started
 
